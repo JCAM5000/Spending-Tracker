@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111713">
+<meta name="description" content="A simple personal spending tracker.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Spending</title>
+<style>
+:root{color-scheme:dark;--bg:#101411;--panel:#1a211c;--panel2:#222b25;--text:#f1f5f1;--muted:#aab5ac;--line:#344039;--green:#9cdaa9;--red:#ff9c91;--accent:#b6e6bf}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.app{max-width:760px;margin:auto;padding:20px 16px 48px}
+header{display:flex;justify-content:space-between;align-items:center;margin:6px 0 22px}
+h1{font-size:27px;margin:0;letter-spacing:-.5px} .sub{color:var(--muted);font-size:13px}
+button,input,select{font:inherit}button{border:0;border-radius:12px;padding:11px 14px;background:var(--accent);color:#102016;font-weight:700;cursor:pointer}
+button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+button.danger{background:#492723;color:#ffd8d3}button.small{padding:7px 10px;font-size:13px;border-radius:9px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:17px;margin-bottom:14px}
+.total-label{color:var(--muted);font-size:13px}.total{font-size:38px;font-weight:750;letter-spacing:-1.5px;margin:1px 0 10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{background:var(--panel2);border-radius:13px;padding:11px}.stat strong{display:block;font-size:18px}.stat span{font-size:11px;color:var(--muted)}
+.monthrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}.monthrow input{max-width:170px}
+label{display:block;color:var(--muted);font-size:12px;margin:0 0 5px}
+input,select{width:100%;background:#101713;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;min-width:0}
+.formgrid{display:grid;grid-template-columns:1.2fr .8fr;gap:10px}.formgrid .wide{grid-column:1/-1}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sectionhead{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}.sectionhead h2{font-size:17px;margin:0}
+.entry{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}
+.entry:last-child{border-bottom:0}.entryname{font-weight:650}.entrymeta{font-size:12px;color:var(--muted)}.entryright{text-align:right;white-space:nowrap;font-weight:700}
+.entrybuttons{display:flex;gap:5px;justify-content:flex-end;margin-top:5px}
+.pill{font-size:11px;color:var(--muted);background:var(--panel2);padding:3px 7px;border-radius:20px;margin-left:5px}
+.empty{color:var(--muted);text-align:center;padding:25px 8px}
+#notice{color:var(--green);font-size:12px;min-height:18px;margin-top:7px}
+footer{color:var(--muted);font-size:12px;margin:24px 2px;line-height:1.5}
+.hidden{display:none!important}
+@media(max-width:420px){.app{padding:15px 12px 36px}.total{font-size:34px}.stats{gap:6px}.stat{padding:9px}.stat strong{font-size:16px}.formgrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div><h1>Spending</h1><div class="sub">A simple running record of your money</div></div><button class="secondary small" id="installBtn" hidden>Install app</button></header>
+
+<section class="card">
+ <div class="monthrow"><div><div class="total-label">MONTHLY SPENDING</div><div class="sub" id="monthLabel"></div></div><input type="month" id="monthPicker" aria-label="Choose month"></div>
+ <div class="total" id="monthTotal">$0.00</div>
+ <div class="stats">
+  <div class="stat"><strong id="count">0</strong><span>Expenses</span></div>
+  <div class="stat"><strong id="average">$0</strong><span>Average / expense</span></div>
+  <div class="stat"><strong id="daily">$0</strong><span>Average / day</span></div>
+ </div>
+</section>
+
+<section class="card">
+ <h2 style="font-size:17px;margin:0 0 13px" id="formTitle">Add an expense</h2>
+ <form id="expenseForm">
+  <div class="formgrid">
+   <div class="wide"><label for="description">What did you spend on?</label><input id="description" maxlength="70" placeholder="e.g. Bowling" required></div>
+   <div><label for="amount">Amount ($)</label><input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+   <div><label for="date">Date</label><input id="date" type="date" required></div>
+   <div class="wide"><label for="category">Category (optional)</label><select id="category"><option value="Uncategorized">Uncategorized</option><option>Food & drinks</option><option>Entertainment</option><option>Shopping</option><option>Transportation</option><option>Home</option><option>Bills</option><option>Other</option></select></div>
+  </div>
+  <div class="actions"><button type="submit" id="saveBtn">Add expense</button><button type="button" class="secondary hidden" id="cancelEdit">Cancel</button></div>
+  <div id="notice" role="status"></div>
+ </form>
+</section>
+
+<div class="sectionhead"><h2>Expenses</h2><span class="sub" id="listCount"></span></div>
+<section class="card" id="entries"></section>
+
+<div class="sectionhead"><h2>Monthly history</h2></div>
+<section class="card" id="history"></section>
+
+<div class="actions">
+ <button class="secondary" id="csvBtn">Export CSV</button>
+ <button class="secondary" id="backupBtn">Download backup</button>
+ <button class="secondary" id="restoreBtn">Restore backup</button>
+ <input type="file" id="restoreFile" accept="application/json" class="hidden">
+</div>
+<footer>
+Your entries are saved in this browser on this device. There is no account or bank connection, and your data is not sent to a server. Use <b>Download backup</b> occasionally if you want to protect your records or move them to another device.
+</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'}).format(n);
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const monthNow=today().slice(0,7);
+let expenses=[];
+let editingId=null;
+try{expenses=JSON.parse(localStorage.getItem('spending-v1')||'[]');if(!Array.isArray(expenses))expenses=[]}catch{expenses=[]}
+function save(){localStorage.setItem('spending-v1',JSON.stringify(expenses))}
+function selectedMonth(){return $('monthPicker').value||monthNow}
+function monthEntries(m){return expenses.filter(e=>e.date.slice(0,7)===m).sort((a,b)=>b.date.localeCompare(a.date)||b.created-b.created)}
+function render(){
+ const m=selectedMonth(), list=monthEntries(m), sum=list.reduce((s,e)=>s+Number(e.amount),0);
+ const [y,mo]=m.split('-').map(Number), days=new Date(y,mo,0).getDate();
+ $('monthLabel').textContent=new Date(y,mo-1,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+ $('monthTotal').textContent=money(sum);$('count').textContent=list.length;
+ $('average').textContent=money(list.length?sum/list.length:0);
+ const elapsed=Math.max(1,Math.min(days,new Date().getDate()));
+ $('daily').textContent=money(sum/elapsed);$('listCount').textContent=`${list.length} ${list.length===1?'item':'items'}`;
+ $('entries').innerHTML=list.length?list.map(e=>`<div class="entry"><div><div class="entryname">${esc(e.description)}${e.category&&e.category!=='Uncategorized'?` <span class="pill">${esc(e.category)}</span>`:''}</div><div class="entrymeta">${new Date(e.date+'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}</div></div><div class="entryright">${money(Number(e.amount))}<div class="entrybuttons"><button class="secondary small" onclick="editEntry('${e.id}')">Edit</button><button class="danger small" onclick="deleteEntry('${e.id}')">Delete</button></div></div></div>`).join(''):'<div class="empty">No expenses for this month yet. Add one above.</div>';
+ const months=[...new Set(expenses.map(e=>e.date.slice(0,7)))].sort().reverse();
+ $('history').innerHTML=months.length?months.map(mm=>{const arr=monthEntries(mm),total=arr.reduce((s,e)=>s+Number(e.amount),0);const [yy,mn]=mm.split('-').map(Number);return `<div class="entry"><div><div class="entryname">${new Date(yy,mn-1,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'})}</div><div class="entrymeta">${arr.length} ${arr.length===1?'expense':'expenses'}</div></div><div class="entryright">${money(total)}<div class="entrybuttons"><button class="secondary small" onclick="showMonth('${mm}')">View</button></div></div></div>`}).join(''):'<div class="empty">Your monthly history will appear here.</div>';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function resetForm(){$('expenseForm').reset();$('date').value=today();editingId=null;$('formTitle').textContent='Add an expense';$('saveBtn').textContent='Add expense';$('cancelEdit').classList.add('hidden')}
+window.editEntry=id=>{const e=expenses.find(x=>x.id===id);if(!e)return;editingId=id;$('description').value=e.description;$('amount').value=e.amount;$('date').value=e.date;$('category').value=e.category||'Uncategorized';$('formTitle').textContent='Edit expense';$('saveBtn').textContent='Save changes';$('cancelEdit').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})};
+window.deleteEntry=id=>{if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!==id);save();render()};
+window.showMonth=m=>{$('monthPicker').value=m;render();window.scrollTo({top:0,behavior:'smooth'})};
+$('expenseForm').addEventListener('submit',e=>{e.preventDefault();const description=$('description').value.trim(),amount=Number($('amount').value),date=$('date').value;if(!description||!Number.isFinite(amount)||amount<=0||!date)return;const obj={id:editingId||crypto.randomUUID(),description,amount:Math.round(amount*100)/100,date,category:$('category').value,created:Date.now()};if(editingId){expenses=expenses.map(x=>x.id===editingId?obj:x)}else{expenses.push(obj)}save();$('monthPicker').value=date.slice(0,7);resetForm();$('notice').textContent='Saved.';render();setTimeout(()=>$('notice').textContent='',2200)});
+$('cancelEdit').onclick=resetForm;
+$('monthPicker').value=monthNow;$('monthPicker').addEventListener('change',render);$('date').value=today();
+$('csvBtn').onclick=()=>{const rows=[['Date','Description','Category','Amount CAD'],...monthEntries(selectedMonth()).map(e=>[e.date,e.description,e.category||'',Number(e.amount).toFixed(2)])];const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');download(new Blob([csv],{type:'text/csv'}),`spending-${selectedMonth()}.csv`)};
+$('backupBtn').onclick=()=>download(new Blob([JSON.stringify({version:1,expenses},null,2)],{type:'application/json'}),'spending-backup.json');
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('restoreBtn').onclick=()=>$('restoreFile').click();
+$('restoreFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.expenses))throw Error();if(!confirm('Replace the current records with the backup?'))return;expenses=data.expenses;save();render();alert('Backup restored.')}catch{alert('That file does not look like a valid Spending backup.')}e.target.value=''};
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+let deferredPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').hidden=false});
+$('installBtn').onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('installBtn').hidden=true};
+</script>
+</body></html>
